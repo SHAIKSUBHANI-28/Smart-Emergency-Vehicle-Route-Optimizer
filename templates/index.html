@@ -1,0 +1,3735 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Emergency Vehicle Route Optimizer</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #111827;
+        }
+
+        /* ================================
+           HEADER
+        ================================= */
+
+        .header {
+            background: #111827;
+            color: white;
+            padding: 22px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 30px;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            color: #d1d5db;
+            font-size: 16px;
+    
+        }
+
+        /* ================================
+           BUTTONS
+        ================================= */
+
+        .controls {
+            background: white;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 13px 22px;
+            border-radius: 7px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #b91c1c;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* ================================
+           STATUS
+        ================================= */
+
+        #status {
+            text-align: center;
+            font-size: 17px;
+            font-weight: bold;
+            padding: 12px;
+            display: none;
+        }
+
+        .normal-status {
+            color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .blocked-status {
+            color: #dc2626;
+            background: #fef2f2;
+        }
+
+        .success-status {
+            color: #15803d;
+            background: #f0fdf4;
+        }
+
+        /* ================================
+           MAIN INFO
+        ================================= */
+
+        .info {
+            background: white;
+            margin: 15px;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            min-width: 180px;
+        }
+
+        .info-box h3 {
+            margin: 5px;
+            color: #374151;
+        }
+
+        .info-box p {
+            margin: 8px 5px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #dc2626;
+        }
+
+        /* ================================
+           PHASE 3 COMPARISON
+        ================================= */
+
+        .comparison-section {
+            margin: 15px;
+        }
+
+        .comparison-title {
+            text-align: center;
+            margin: 20px 0 12px;
+            font-size: 24px;
+            color: #111827;
+        }
+
+        .comparison-container {
+            display: flex;
+            gap: 18px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .route-card {
+            background: white;
+            width: 320px;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+            border-top: 5px solid #2563eb;
+        }
+
+        .route-card.alternate {
+            border-top-color: #f97316;
+        }
+
+        .route-card h3 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .route-card p {
+            margin: 12px 0;
+            font-size: 16px;
+        }
+
+        .route-value {
+            font-weight: bold;
+            font-size: 19px;
+        }
+
+        .recommendation {
+            background: #ecfdf5;
+            border: 2px solid #16a34a;
+            margin: 18px auto;
+            max-width: 680px;
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        .recommendation h3 {
+            margin: 0 0 8px;
+            color: #15803d;
+            font-size: 22px;
+        }
+
+        .recommendation p {
+            margin: 6px 0;
+            font-size: 16px;
+        }
+
+        /* ================================
+           BLOCKED ROAD
+        ================================= */
+
+        .blocked-road {
+            text-align: center;
+            color: #e31e24;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 15px;
+        }
+
+        /* ================================
+           MAP
+        ================================= */
+
+        #map {
+            height: 600px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* ================================
+           AMBULANCE
+        ================================= */
+
+        .ambulance-icon {
+            font-size: 30px;
+            text-align: center;
+            line-height: 40px;
+            background: transparent;
+            border: none;
+        }
+
+        /* ================================
+           RESPONSIVE
+        ================================= */
+
+        @media (max-width: 700px) {
+
+            .header h1 {
+                font-size: 23px;
+            }
+
+            .info {
+                flex-direction: column;
+            }
+
+            .route-card {
+                width: 90%;
+            }
+
+            #map {
+                height: 500px;
+            }
+
+        }
+
+        /* =========================================
+   PHASE 4 - EMERGENCY VEHICLE PANEL
+========================================= */
+
+.vehicle-panel {
+
+    background: white;
+
+    margin: 15px;
+
+    padding: 18px;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.12);
+
+}
+
+
+.vehicle-header {
+
+    text-align: center;
+
+    font-size: 22px;
+
+    font-weight: bold;
+
+    margin-bottom: 18px;
+
+    color: #111827;
+
+}
+
+
+.vehicle-status-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 15px;
+
+}
+
+
+.vehicle-status-box {
+
+    background: #f9fafb;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+}
+
+
+.vehicle-icon {
+
+    font-size: 28px;
+
+}
+
+
+.vehicle-status-box h4 {
+
+    margin: 0 0 5px 0;
+
+    color: #6b7280;
+
+    font-size: 14px;
+
+}
+
+
+.vehicle-status-box p {
+
+    margin: 0;
+
+    font-size: 17px;
+
+    font-weight: bold;
+
+    color: #111827;
+
+}
+
+
+.progress-container {
+
+    margin-top: 18px;
+
+}
+
+
+.progress-bar {
+
+    width: 100%;
+
+    height: 12px;
+
+    background: #e5e7eb;
+
+    border-radius: 10px;
+
+    overflow: hidden;
+
+}
+
+
+.progress-fill {
+
+    width: 0%;
+
+    height: 100%;
+
+    background: #16a34a;
+
+    border-radius: 10px;
+
+    transition: width 0.2s linear;
+
+}
+.location-inputs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background: white;
+    margin: 0;
+}
+
+.location-inputs label {
+    font-size: 18px;
+    font-weight: bold;
+    color: #1f2937;
+}
+
+.location-inputs input {
+    width: 280px;
+    padding: 12px 15px;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+}
+
+.location-inputs input:focus {
+    border-color: #2563eb;
+}
+
+
+@media (max-width: 800px) {
+
+    .vehicle-status-grid {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+
+    }
+
+}
+
+
+@media (max-width: 500px) {
+
+    .vehicle-status-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+}
+/* =================================================
+   🚑 PHASE 7 - PROFESSIONAL DASHBOARD
+================================================= */
+
+.dashboard-section {
+    margin: 20px 15px;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+}
+
+.dashboard-title {
+    text-align: center;
+    margin: 0 0 20px 0;
+    font-size: 25px;
+    color: #111827;
+}
+
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.dashboard-card {
+    padding: 20px;
+    border-radius: 12px;
+    background: #f8fafc;
+    text-align: center;
+    border-left: 5px solid #2563eb;
+}
+
+.dashboard-card:nth-child(2) {
+    border-left-color: #16a34a;
+}
+
+.dashboard-card:nth-child(3) {
+    border-left-color: #f97316;
+}
+
+.dashboard-card:nth-child(4) {
+    border-left-color: #7c3aed;
+}
+
+.dashboard-card .dashboard-icon {
+    font-size: 30px;
+}
+
+.dashboard-card h3 {
+    margin: 8px 0;
+    color: #374151;
+    font-size: 15px;
+}
+
+.dashboard-card p {
+    margin: 0;
+    font-size: 28px;
+    font-weight: bold;
+    color: #111827;
+}
+
+.dashboard-table-container {
+    margin-top: 25px;
+    overflow-x: auto;
+}
+
+.dashboard-table-title {
+    font-size: 20px;
+    margin-bottom: 12px;
+    color: #111827;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.dashboard-table th {
+    background: #111827;
+    color: white;
+    padding: 12px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.dashboard-table td {
+    padding: 11px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 14px;
+}
+
+.dashboard-table tr:hover {
+    background: #f9fafb;
+}
+
+.route-shortest {
+    color: #2563eb;
+    font-weight: bold;
+}
+
+.route-alternate {
+    color: #f97316;
+    font-weight: bold;
+}
+
+.route-completed {
+    color: #15803d;
+    font-weight: bold;
+}
+
+.dashboard-refresh {
+    display: block;
+    margin: 20px auto 0 auto;
+    background: #2563eb;
+}
+
+.dashboard-refresh:hover {
+    background: #1d4ed8;
+}
+
+@media (max-width: 900px) {
+
+    .dashboard-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+@media (max-width: 500px) {
+
+    .dashboard-cards {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================================
+         HEADER
+    ========================================== -->
+
+    <div class="header">
+
+        <h1>
+            🚑 Smart Emergency Vehicle Route Optimizer
+        </h1>
+
+        <p>
+            Intelligent shortest-path routing for emergency vehicles
+        </p>
+
+    </div>
+
+           
+    <!-- =========================================
+         BUTTONS
+    ========================================== -->
+
+    <div class="controls">
+
+        <button onclick="findRoute()">
+            🚨 Find Shortest Route
+        </button>
+
+        <button onclick="simulateBlock()">
+            🚧 Simulate Road Block
+        </button>
+
+        <button onclick="resetRoute()">
+            🔄 Reset Route
+        </button>
+        <button onclick="startMultipleVehicles()">
+    🚨 Multiple Emergency Vehicles
+</button>
+<button onclick="aiOptimizeRoute()">
+    🧠 AI Optimize Route
+</button>
+
+    </div>
+     <!-- SOURCE & DESTINATION -->
+           <div class="location-inputs">
+
+    <label>📍 Source</label>
+    <input
+        type="text"
+        id="source"
+        placeholder="Enter source location"
+    >
+
+    <label>🏁 Destination</label>
+    <input
+        type="text"
+        id="destination"
+        placeholder="Enter destination location"
+    >
+
+</div>
+
+
+    <!-- =========================================
+         STATUS
+    ========================================== -->
+
+    <div id="status"></div>
+
+
+    <!-- =========================================
+         BASIC INFORMATION
+    ========================================== -->
+
+    <div class="info">
+
+        <div class="info-box">
+
+            <h3>📍 Start</h3>
+
+            <p>
+                Emergency Vehicle
+            </p>
+
+        </div>
+
+
+        <div class="info-box">
+
+            <h3>🏥 Destination</h3>
+
+            <p>
+                Emergency Location
+            </p>
+
+        </div>
+
+
+        <div class="info-box">
+
+            <h3>📏 Current Distance</h3>
+
+            <p id="distance">
+                {{ distance }} km
+            </p>
+
+        </div>
+
+
+        <div class="info-box">
+
+            <h3>⏱ Estimated Time</h3>
+
+            <p id="time">
+                {{ time }} minutes
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         PHASE 3 ROUTE COMPARISON
+    ========================================== -->
+
+    <div class="comparison-section">
+
+        <h2 class="comparison-title">
+            📊 Route Comparison
+        </h2>
+
+
+        <div class="comparison-container">
+
+
+            <!-- ORIGINAL ROUTE -->
+
+            <div class="route-card">
+
+                <h3>
+                    🟦 Original Route
+                </h3>
+
+                <p>
+                    📏 Distance:
+                    <span
+                        class="route-value"
+                        id="originalDistance"
+                    >
+                        {{ original_distance }} km
+                    </span>
+                </p>
+
+                <p>
+                    ⏱ Travel Time:
+                    <span
+                        class="route-value"
+                        id="originalTime"
+                    >
+                        {{ original_time }} minutes
+                    </span>
+                </p>
+
+            </div>
+
+
+            <!-- ALTERNATE ROUTE -->
+
+            <div class="route-card alternate">
+
+                <h3>
+                    🟧 Alternate Route
+                </h3>
+
+                <p>
+                    📏 Distance:
+                    <span
+                        class="route-value"
+                        id="alternateDistance"
+                    >
+                        Not calculated
+                    </span>
+                </p>
+
+                <p>
+                    ⏱ Travel Time:
+                    <span
+                        class="route-value"
+                        id="alternateTime"
+                    >
+                        Not calculated
+                    </span>
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================
+             RECOMMENDATION
+        ====================================== -->
+
+        <div
+            id="recommendation"
+            class="recommendation"
+        >
+
+            <h3 id="recommendedRoute">
+                🏆 Recommended Route
+            </h3>
+
+            <p id="recommendationReason">
+                Waiting for route comparison...
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================
+         BLOCKED ROAD MESSAGE
+    ========================================== -->
+
+    <div
+        id="blockedRoad"
+        class="blocked-road"
+    ></div>
+
+
+    <!-- =========================================
+         MAP
+    ========================================== -->
+
+    <!-- =========================================
+     PHASE 4 - EMERGENCY VEHICLE STATUS
+========================================== -->
+
+<div class="vehicle-panel">
+
+    <div class="vehicle-header">
+        🚑 Emergency Vehicle Status
+    </div>
+
+    <div class="vehicle-status-grid">
+
+        <div class="vehicle-status-box">
+
+            <div class="vehicle-icon">
+                🚑
+            </div>
+
+            <div>
+                <h4>Vehicle</h4>
+                <p id="vehicleStatus">
+                    Ready
+                </p>
+            </div>
+
+        </div>
+
+
+        <div class="vehicle-status-box">
+
+            <div class="vehicle-icon">
+                📊
+            </div>
+
+            <div>
+                <h4>Progress</h4>
+                <p id="vehicleProgress">
+                    0%
+                </p>
+            </div>
+
+        </div>
+
+
+        <div class="vehicle-status-box">
+
+            <div class="vehicle-icon">
+                📍
+            </div>
+
+            <div>
+                <h4>Position</h4>
+                <p id="vehiclePosition">
+                    Starting point
+                </p>
+            </div>
+
+        </div>
+
+
+        <div class="vehicle-status-box">
+
+            <div class="vehicle-icon">
+                ⏱️
+            </div>
+
+            <div>
+                <h4>ETA</h4>
+                <p id="vehicleETA">
+                    Calculating...
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="progress-container">
+
+        <div class="progress-bar">
+
+            <div
+                id="vehicleProgressBar"
+                class="progress-fill"
+            ></div>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- ================================================= -->
+<!-- 🚨 PHASE 5 - MULTIPLE EMERGENCY VEHICLES -->
+<!-- ================================================= -->
+
+<div
+    id="multipleVehiclePanel"
+    style="
+        display:none;
+        background:white;
+        margin:15px;
+        padding:20px;
+        border-radius:12px;
+        box-shadow:0 2px 10px rgba(0,0,0,0.12);
+    "
+>
+
+    <h2
+        style="
+            text-align:center;
+            margin-top:0;
+        "
+    >
+        🚨 Multiple Emergency Vehicles
+    </h2>
+
+    <div
+        id="multipleVehicleCards"
+        style="
+            display:flex;
+            gap:15px;
+            justify-content:center;
+            flex-wrap:wrap;
+        "
+    >
+    </div>
+</div>
+    <!-- ================================================= -->
+<!-- 📊 PHASE 7 - PROFESSIONAL DASHBOARD -->
+<!-- ================================================= -->
+
+<div class="dashboard-section">
+
+    <h2 class="dashboard-title">
+        📊 Emergency Route Analytics Dashboard
+    </h2>
+
+    <!-- DASHBOARD CARDS -->
+
+    <div class="dashboard-cards">
+
+        <div class="dashboard-card">
+
+            <div class="dashboard-icon">
+                🚨
+            </div>
+
+            <h3>Total Routes</h3>
+
+            <p id="dashboardTotalRoutes">
+                0
+            </p>
+
+        </div>
+
+
+        <div class="dashboard-card">
+
+            <div class="dashboard-icon">
+                🛣️
+            </div>
+
+            <h3>Shortest Routes</h3>
+
+            <p id="dashboardShortestRoutes">
+                0
+            </p>
+
+        </div>
+
+
+        <div class="dashboard-card">
+
+            <div class="dashboard-icon">
+                🔄
+            </div>
+
+            <h3>Alternate Routes</h3>
+
+            <p id="dashboardAlternateRoutes">
+                0
+            </p>
+
+        </div>
+
+
+        <div class="dashboard-card">
+
+            <div class="dashboard-icon">
+                ✅
+            </div>
+
+            <h3>Completed Routes</h3>
+
+            <p id="dashboardCompletedRoutes">
+                0
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- RECENT ROUTES -->
+
+    <div class="dashboard-table-container">
+
+        <h3 class="dashboard-table-title">
+            📋 Recent Emergency Routes
+        </h3>
+
+        <table class="dashboard-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>ID</th>
+
+                    <th>Source</th>
+
+                    <th>Destination</th>
+
+                    <th>Vehicle</th>
+
+                    <th>Distance</th>
+
+                    <th>Time</th>
+
+                    <th>Route Type</th>
+
+                    <th>Status</th>
+
+                    <th>Created At</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="dashboardRoutesTable">
+
+                <tr>
+
+                    <td colspan="9">
+                        Loading route data...
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <!-- REFRESH BUTTON -->
+
+    <button
+        class="dashboard-refresh"
+        onclick="loadDashboardData()"
+    >
+        🔄 Refresh Dashboard
+    </button>
+
+</div>
+
+
+
+    <div id="map"></div>
+
+
+    <!-- =========================================
+         ROUTE DATA FROM FLASK
+    ========================================== -->
+
+    <script id="route-data" type="application/json">
+        {{ route | tojson }}
+    </script>
+
+    <script id="distance-data" type="application/json">
+        {{ distance | tojson }}
+    </script>
+
+    <script id="time-data" type="application/json">
+        {{ time | tojson }}
+    </script>
+
+    <script id="alternate-data" type="application/json">
+        {{ alternate | tojson }}
+    </script>
+
+    <script id="original-distance-data" type="application/json">
+        {{ original_distance | tojson }}
+    </script>
+
+    <script id="original-time-data" type="application/json">
+        {{ original_time | tojson }}
+    </script>
+
+    <script id="alternate-distance-data" type="application/json">
+        {{ alternate_distance | tojson }}
+    </script>
+
+    <script id="alternate-time-data" type="application/json">
+        {{ alternate_time | tojson }}
+    </script>
+
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+
+
+    <script>
+
+        // =============================================
+        // CREATE MAP
+        // =============================================
+
+        var map = L.map("map");
+
+
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                attribution:
+                    "&copy; OpenStreetMap contributors"
+            }
+        ).addTo(map);
+
+
+        // =============================================
+        // GET DATA FROM FLASK
+        // =============================================
+
+        var routeData = JSON.parse(
+            document.getElementById(
+                "route-data"
+            ).textContent
+        );
+
+
+        var originalRouteData = JSON.parse(
+            JSON.stringify(routeData)
+        );
+
+
+        var distanceData = JSON.parse(
+            document.getElementById(
+                "distance-data"
+            ).textContent
+        );
+
+
+        var timeData = JSON.parse(
+            document.getElementById(
+                "time-data"
+            ).textContent
+        );
+
+
+        var originalDistanceData = JSON.parse(
+            document.getElementById(
+                "original-distance-data"
+            ).textContent
+        );
+
+
+        var originalTimeData = JSON.parse(
+            document.getElementById(
+                "original-time-data"
+            ).textContent
+        );
+
+
+        // =============================================
+        // VARIABLES
+        // =============================================
+
+        var routeLine = null;
+
+        var blockedLine = null;
+
+        var startMarker = null;
+
+        var destinationMarker = null;
+
+        var ambulanceMarker = null;
+
+        var ambulanceAnimationId = null;
+
+
+        // =============================================
+        // AMBULANCE ICON
+        // =============================================
+
+        var ambulanceIcon = L.divIcon({
+
+            html: "🚑",
+
+            className: "ambulance-icon",
+
+            iconSize: [40, 40],
+
+            iconAnchor: [20, 20]
+
+        });
+
+
+        // =============================================
+        // DRAW ROUTE
+        // =============================================
+
+        function drawRoute(route, routeColor) {
+
+            if (
+                !route ||
+                route.length < 2
+            ) {
+
+                console.log(
+                    "❌ Invalid route"
+                );
+
+                return;
+
+            }
+
+
+            // Remove old route
+
+            if (routeLine !== null) {
+
+                map.removeLayer(
+                    routeLine
+                );
+
+                routeLine = null;
+
+            }
+
+
+            // Draw route
+
+            routeLine = L.polyline(
+                route,
+                {
+                    color: routeColor,
+                    weight: 8,
+                    opacity: 1
+                }
+            ).addTo(map);
+
+
+            // Fit map
+
+            map.fitBounds(
+                routeLine.getBounds(),
+                {
+                    padding: [30, 30]
+                }
+            );
+
+
+            // Remove old start marker
+
+            if (startMarker !== null) {
+
+                map.removeLayer(
+                    startMarker
+                );
+
+            }
+
+
+            // Remove old destination marker
+
+            if (destinationMarker !== null) {
+
+                map.removeLayer(
+                    destinationMarker
+                );
+
+            }
+
+
+            // Start marker
+
+            startMarker = L.marker(
+                route[0]
+            ).addTo(map);
+
+
+            startMarker.bindPopup(
+                "<b>📍 Emergency Vehicle</b><br>" +
+                "Start Location"
+            );
+
+
+            // Destination marker
+
+            destinationMarker = L.marker(
+                route[route.length - 1]
+            ).addTo(map);
+
+
+            destinationMarker.bindPopup(
+                "<b>🏥 Emergency Location</b><br>" +
+                "Destination"
+            );
+
+        }
+
+
+// =============================================
+// 🚑 PHASE 4 - AMBULANCE ANIMATION
+// =============================================
+
+function startAmbulance(route) {
+
+    if (!route || route.length < 2) {
+
+        console.log(
+            "❌ Invalid ambulance route"
+        );
+
+        return;
+    }
+
+
+    // =============================================
+    // STOP PREVIOUS ANIMATION
+    // =============================================
+
+    if (ambulanceAnimationId !== null) {
+
+        cancelAnimationFrame(
+            ambulanceAnimationId
+        );
+
+        ambulanceAnimationId = null;
+    }
+
+
+    // =============================================
+    // REMOVE OLD AMBULANCE
+    // =============================================
+
+    if (ambulanceMarker !== null) {
+
+        map.removeLayer(
+            ambulanceMarker
+        );
+
+        ambulanceMarker = null;
+    }
+
+
+    // =============================================
+    // DASHBOARD ELEMENTS
+    // =============================================
+
+    var vehicleStatus =
+        document.getElementById(
+            "vehicleStatus"
+        );
+
+    var vehicleProgress =
+        document.getElementById(
+            "vehicleProgress"
+        );
+
+    var vehiclePosition =
+        document.getElementById(
+            "vehiclePosition"
+        );
+
+    var vehicleETA =
+        document.getElementById(
+            "vehicleETA"
+        );
+
+    var vehicleProgressBar =
+        document.getElementById(
+            "vehicleProgressBar"
+        );
+
+
+    // =============================================
+    // INITIAL DASHBOARD STATE
+    // =============================================
+
+    if (vehicleStatus) {
+
+        vehicleStatus.innerText =
+            "En Route";
+    }
+
+    if (vehicleProgress) {
+
+        vehicleProgress.innerText =
+            "0%";
+    }
+
+    if (vehiclePosition) {
+
+        vehiclePosition.innerText =
+            "Starting point";
+    }
+
+    if (vehicleETA) {
+
+        vehicleETA.innerText =
+            "Calculating...";
+    }
+
+    if (vehicleProgressBar) {
+
+        vehicleProgressBar.style.width =
+            "0%";
+    }
+
+
+    // =============================================
+    // CREATE AMBULANCE
+    // =============================================
+
+    ambulanceMarker =
+        L.marker(
+            route[0],
+            {
+                icon: ambulanceIcon,
+                zIndexOffset: 1000
+            }
+        ).addTo(map);
+
+
+    ambulanceMarker.bindPopup(
+        "<b>🚑 Emergency Vehicle</b><br>" +
+        "Status: En Route<br>" +
+        "Progress: 0%"
+    );
+
+
+    // =============================================
+    // DISTANCE CALCULATION
+    // =============================================
+
+    function distanceInMeters(
+        point1,
+        point2
+    ) {
+
+        var lat1 =
+            point1[0] *
+            Math.PI / 180;
+
+        var lat2 =
+            point2[0] *
+            Math.PI / 180;
+
+        var dLat =
+            (point2[0] - point1[0]) *
+            Math.PI / 180;
+
+        var dLng =
+            (point2[1] - point1[1]) *
+            Math.PI / 180;
+
+        var a =
+            Math.sin(dLat / 2) *
+            Math.sin(dLat / 2) +
+            Math.cos(lat1) *
+            Math.cos(lat2) *
+            Math.sin(dLng / 2) *
+            Math.sin(dLng / 2);
+
+        var c =
+            2 *
+            Math.atan2(
+                Math.sqrt(a),
+                Math.sqrt(1 - a)
+            );
+
+        return 6371000 * c;
+    }
+
+
+    // =============================================
+    // CALCULATE TOTAL DISTANCE
+    // =============================================
+
+    var totalDistance = 0;
+
+    var segmentDistances = [];
+
+
+    for (
+        var i = 0;
+        i < route.length - 1;
+        i++
+    ) {
+
+        var segmentDistance =
+            distanceInMeters(
+                route[i],
+                route[i + 1]
+            );
+
+        segmentDistances.push(
+            segmentDistance
+        );
+
+        totalDistance +=
+            segmentDistance;
+    }
+
+
+    // =============================================
+    // START STATUS
+    // =============================================
+
+    var status =
+        document.getElementById(
+            "status"
+        );
+
+    if (status) {
+
+        status.style.display =
+            "block";
+
+        status.className =
+            "normal-status";
+
+        status.innerText =
+            "🚑 Ambulance is travelling to destination";
+    }
+
+
+    // =============================================
+    // ANIMATION SPEED
+    // =============================================
+
+    var speed = 180;
+
+    var currentSegment = 0;
+
+    var segmentStartTime = null;
+
+
+    // =============================================
+    // ANIMATION
+    // =============================================
+
+    function animate(currentTime) {
+
+        if (!ambulanceMarker) {
+
+            return;
+        }
+
+
+        // =========================================
+        // DESTINATION REACHED
+        // =========================================
+
+        if (
+            currentSegment >=
+            route.length - 1
+        ) {
+
+            ambulanceMarker.setLatLng(
+                route[route.length - 1]
+            );
+
+
+            // Dashboard
+            if (vehicleStatus) {
+
+                vehicleStatus.innerText =
+                    "Arrived";
+            }
+
+            if (vehicleProgress) {
+
+                vehicleProgress.innerText =
+                    "100%";
+            }
+
+            if (vehiclePosition) {
+
+                vehiclePosition.innerText =
+                    "Destination";
+            }
+
+            if (vehicleETA) {
+
+                vehicleETA.innerText =
+                    "Arrived";
+            }
+
+            if (vehicleProgressBar) {
+
+                vehicleProgressBar.style.width =
+                    "100%";
+            }
+
+
+            // Popup
+            ambulanceMarker.bindPopup(
+                "<b>🚑 Emergency Vehicle</b><br>" +
+                "Status: Arrived<br>" +
+                "Progress: 100%"
+            );
+
+
+            // Status message
+            if (status) {
+
+                status.className =
+                    "success-status";
+
+                status.innerText =
+                    "🏥 Ambulance arrived at destination";
+            }
+
+
+            ambulanceAnimationId =
+                null;
+
+
+            console.log(
+                "🏥 Ambulance reached destination"
+            );
+
+            return;
+        }
+
+
+        // =========================================
+        // START CURRENT SEGMENT
+        // =========================================
+
+        if (
+            segmentStartTime === null
+        ) {
+
+            segmentStartTime =
+                currentTime;
+        }
+
+
+        var start =
+            route[currentSegment];
+
+        var end =
+            route[currentSegment + 1];
+
+
+        var segmentDistance =
+            segmentDistances[
+                currentSegment
+            ];
+
+
+        // =========================================
+        // SEGMENT DURATION
+        // =========================================
+
+        var duration =
+            Math.max(
+                300,
+                (
+                    segmentDistance /
+                    speed
+                ) * 1000
+            );
+
+
+        // =========================================
+        // SEGMENT PROGRESS
+        // =========================================
+
+        var progress =
+            (
+                currentTime -
+                segmentStartTime
+            ) / duration;
+
+
+        if (progress > 1) {
+
+            progress = 1;
+        }
+
+
+        // =========================================
+        // CURRENT POSITION
+        // =========================================
+
+        var lat =
+            start[0] +
+            (
+                end[0] -
+                start[0]
+            ) *
+            progress;
+
+        var lng =
+            start[1] +
+            (
+                end[1] -
+                start[1]
+            ) *
+            progress;
+
+
+        ambulanceMarker.setLatLng(
+            [lat, lng]
+        );
+
+
+        // =========================================
+        // TRAVELLED DISTANCE
+        // =========================================
+
+        var travelledDistance = 0;
+
+
+        for (
+            var j = 0;
+            j < currentSegment;
+            j++
+        ) {
+
+            travelledDistance +=
+                segmentDistances[j];
+        }
+
+
+        travelledDistance +=
+            segmentDistance *
+            progress;
+
+
+        // =========================================
+        // PERCENTAGE
+        // =========================================
+
+        var percentage =
+            totalDistance > 0
+                ? Math.round(
+                    (
+                        travelledDistance /
+                        totalDistance
+                    ) * 100
+                )
+                : 0;
+
+
+        if (percentage > 100) {
+
+            percentage = 100;
+        }
+
+
+        // =========================================
+        // DASHBOARD - VEHICLE
+        // =========================================
+
+        if (vehicleStatus) {
+
+            vehicleStatus.innerText =
+                "En Route";
+        }
+
+
+        // =========================================
+        // DASHBOARD - PROGRESS
+        // =========================================
+
+        if (vehicleProgress) {
+
+            vehicleProgress.innerText =
+                percentage + "%";
+        }
+
+
+        // =========================================
+        // DASHBOARD - POSITION
+        // =========================================
+
+        if (vehiclePosition) {
+
+            vehiclePosition.innerText =
+                lat.toFixed(4) +
+                ", " +
+                lng.toFixed(4);
+        }
+
+
+        // =========================================
+        // DASHBOARD - ETA
+        // =========================================
+
+        if (vehicleETA) {
+
+            var totalTime =
+                parseFloat(timeData);
+
+            if (
+                isNaN(totalTime) ||
+                totalTime <= 0
+            ) {
+
+                vehicleETA.innerText =
+                    "Calculating...";
+
+            } else {
+
+                var remainingTime =
+                    totalTime *
+                    (1 - percentage / 100);
+
+                if (
+                    remainingTime < 0.1
+                ) {
+
+                    vehicleETA.innerText =
+                        "Arriving...";
+
+                } else {
+
+                    vehicleETA.innerText =
+                        Math.ceil(
+                            remainingTime
+                        ) +
+                        " minutes";
+                }
+            }
+        }
+
+
+        // =========================================
+        // PROGRESS BAR
+        // =========================================
+
+        if (vehicleProgressBar) {
+
+            vehicleProgressBar.style.width =
+                percentage + "%";
+        }
+
+
+        // =========================================
+        // AMBULANCE POPUP
+        // =========================================
+
+        ambulanceMarker.bindPopup(
+            "<b>🚑 Emergency Vehicle</b><br>" +
+            "Status: En Route<br>" +
+            "Progress: " +
+            percentage +
+            "%"
+        );
+
+
+        // =========================================
+        // NEXT SEGMENT
+        // =========================================
+
+        if (progress >= 1) {
+
+            currentSegment++;
+
+            segmentStartTime = null;
+        }
+
+
+        // =========================================
+        // CONTINUE ANIMATION
+        // =========================================
+
+        ambulanceAnimationId =
+            requestAnimationFrame(
+                animate
+            );
+    }
+
+
+    // =============================================
+    // START ANIMATION
+    // =============================================
+
+    ambulanceAnimationId =
+        requestAnimationFrame(
+            animate
+        );
+
+
+    console.log(
+        "🚑 Phase 4 ambulance animation started"
+    );
+}
+// =================================================
+// 🚨 FIND SHORTEST ROUTE
+// =================================================
+
+function findRoute() {
+
+    var source =
+        document.getElementById("source").value.trim();
+
+    var destination =
+        document.getElementById("destination").value.trim();
+    
+    if (source === "" || destination === "") {
+    alert("Please enter both source and destination");
+    return;
+}
+    
+
+     // =========================================
+// CLEAR MULTIPLE EMERGENCY VEHICLES
+// =========================================
+
+clearMultipleVehicles();
+
+var multiplePanel =
+    document.getElementById(
+        "multipleVehiclePanel"
+    );
+
+if (multiplePanel) {
+
+    multiplePanel.style.display =
+        "none";
+}
+
+    // =========================================
+    // CHECK INPUTS
+    // =========================================
+
+    if (source === "" || destination === "") {
+
+        alert(
+            "Please enter both source and destination"
+        );
+
+        return;
+    }
+
+
+    console.log(
+        "📍 Source:",
+        source
+    );
+
+    console.log(
+        "🏁 Destination:",
+        destination
+    );
+
+
+    console.log(
+        "🚨 Finding shortest route..."
+    );
+
+
+    // =========================================
+    // SEND SOURCE + DESTINATION TO FLASK
+    // =========================================
+
+    fetch(
+        "/find-route",
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify({
+
+                source: source,
+
+                destination: destination
+
+            })
+        }
+    )
+
+
+    .then(
+        response => {
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Server error"
+                );
+            }
+
+            return response.json();
+        }
+    )
+
+
+    .then(
+        data => {
+
+            console.log(
+                "🚑 Flask response:",
+                data
+            );
+
+
+            // =========================================
+            // SUCCESS
+            // =========================================
+
+            if (data.success) {
+
+                // Store new route
+                routeData =
+                    data.route;
+
+                originalRouteData =
+                    data.route;
+
+                distanceData =
+                    data.distance;
+
+                originalDistanceData =
+                    data.distance;
+
+                timeData =
+                    data.time;
+
+                originalTimeData =
+                    data.time;
+
+                alternateData =
+                    false;
+
+
+                // =========================================
+                // REMOVE BLOCKED ROAD
+                // =========================================
+
+                if (blockedLine !== null) {
+
+                    map.removeLayer(
+                        blockedLine
+                    );
+
+                    blockedLine = null;
+                }
+
+
+                // =========================================
+                // DRAW NEW ROUTE
+                // =========================================
+
+                drawRoute(
+                    data.route,
+                    "blue"
+                );
+
+
+                // =========================================
+                // START AMBULANCE
+                // =========================================
+
+                startAmbulance(
+                    data.route
+                );
+
+
+                // =========================================
+                // UPDATE DISTANCE
+                // =========================================
+
+                document.getElementById(
+                    "distance"
+                ).innerText =
+                    data.distance +
+                    " km";
+
+
+                // =========================================
+                // UPDATE TIME
+                // =========================================
+
+                document.getElementById(
+                    "time"
+                ).innerText =
+                    data.time +
+                    " minutes";
+
+
+                // =========================================
+                // STATUS
+                // =========================================
+
+                var status =
+                    document.getElementById(
+                        "status"
+                    );
+
+
+                if (status) {
+
+                    status.style.display =
+                        "block";
+
+                    status.className =
+                        "normal-status";
+
+                    status.innerText =
+                        "🚑 Shortest route selected";
+                }
+
+
+                console.log(
+                    "✅ Shortest route calculated"
+                );
+
+                console.log(
+                    "📏 Distance:",
+                    data.distance,
+                    "km"
+                );
+
+                console.log(
+                    "⏱️ Time:",
+                    data.time,
+                    "minutes"
+                );
+
+            }
+
+
+            // =========================================
+            // FAILURE
+            // =========================================
+
+            else {
+
+                var status =
+                    document.getElementById(
+                        "status"
+                    );
+
+
+                if (status) {
+
+                    status.style.display =
+                        "block";
+
+                    status.className =
+                        "error-status";
+
+                    status.innerText =
+                        "❌ " +
+                        data.message;
+                }
+
+
+                console.log(
+                    "❌ " +
+                    data.message
+                );
+            }
+        }
+    )
+
+
+    .catch(
+        error => {
+
+            console.error(
+                "❌ Error:",
+                error
+            );
+
+
+            var status =
+                document.getElementById(
+                    "status"
+                );
+
+
+            if (status) {
+
+                status.style.display =
+                    "block";
+
+                status.className =
+                    "error-status";
+
+                status.innerText =
+                    "❌ Could not connect to Flask server.";
+            }
+        }
+    );
+}
+
+
+// =================================================
+// 🚧 SIMULATE ROAD BLOCK
+// =================================================
+
+function simulateBlock() {
+
+    var status =
+        document.getElementById("status");
+
+
+    if (status) {
+
+        status.style.display = "block";
+
+        status.className =
+            "blocked-status";
+
+        status.innerText =
+            "🚧 Road blockage detected... Recalculating route...";
+    }
+
+
+    console.log(
+        "🚧 Requesting alternate route..."
+    );
+
+
+    fetch(
+        "/simulate-block",
+        {
+            method: "POST"
+        }
+    )
+
+    .then(
+        response => {
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Server error"
+                );
+            }
+
+            return response.json();
+        }
+    )
+
+    .then(
+        data => {
+
+            console.log(
+                "🚧 Flask response:",
+                data
+            );
+
+
+            // =========================================
+            // SUCCESS
+            // =========================================
+
+            if (data.success) {
+
+
+                // =========================================
+                // STORE ALTERNATE ROUTE
+                // =========================================
+
+                routeData =
+                    data.route;
+
+                distanceData =
+                    data.alternate_distance;
+
+                timeData =
+                    data.alternate_time;
+
+                alternateData =
+                    true;
+
+
+                // =========================================
+                // REMOVE OLD BLOCKED ROAD
+                // =========================================
+
+                if (blockedLine !== null) {
+
+                    map.removeLayer(
+                        blockedLine
+                    );
+
+                    blockedLine = null;
+                }
+
+
+                // =========================================
+                // DRAW ALTERNATE ROUTE
+                // =========================================
+
+                drawRoute(
+                    data.route,
+                    "orange"
+                );
+
+
+                // =========================================
+                // DRAW BLOCKED ROAD
+                // =========================================
+
+                if (
+                    data.blocked_road &&
+                    data.blocked_road.length >= 2
+                ) {
+
+                    blockedLine =
+                        L.polyline(
+                            data.blocked_road,
+                            {
+                                color: "red",
+                                weight: 10,
+                                opacity: 1,
+                                dashArray: "10, 10"
+                            }
+                        ).addTo(map);
+
+
+                    blockedLine.bindPopup(
+                        "<b>🚧 ROAD BLOCK</b><br>" +
+                        "Road unavailable"
+                    );
+
+
+                    document.getElementById(
+                        "blockedRoad"
+                    ).innerText =
+                        "🚧 Road blockage simulated";
+                }
+
+
+                // =========================================
+                // MOVE AMBULANCE
+                // =========================================
+
+                startAmbulance(
+                    data.route
+                );
+
+
+                // =========================================
+                // CURRENT DISTANCE
+                // =========================================
+
+                document.getElementById(
+                    "distance"
+                ).innerText =
+                    data.alternate_distance +
+                    " km";
+
+
+                // =========================================
+                // CURRENT TIME
+                // =========================================
+
+                document.getElementById(
+                    "time"
+                ).innerText =
+                    data.alternate_time +
+                    " minutes";
+
+
+                // =========================================
+                // ORIGINAL ROUTE CARD
+                // =========================================
+
+                document.getElementById(
+                    "originalDistance"
+                ).innerText =
+                    data.original_distance +
+                    " km";
+
+
+                document.getElementById(
+                    "originalTime"
+                ).innerText =
+                    data.original_time +
+                    " minutes";
+
+
+                // =========================================
+                // ALTERNATE ROUTE CARD
+                // =========================================
+
+                document.getElementById(
+                    "alternateDistance"
+                ).innerText =
+                    data.alternate_distance +
+                    " km";
+
+
+                document.getElementById(
+                    "alternateTime"
+                ).innerText =
+                    data.alternate_time +
+                    " minutes";
+
+
+                // =========================================
+                // RECOMMENDATION
+                // =========================================
+
+                document.getElementById(
+                    "recommendedRoute"
+                ).innerText =
+                    "🏆 Recommended: " +
+                    data.recommended_route;
+
+
+                document.getElementById(
+                    "recommendationReason"
+                ).innerText =
+                    data.recommendation_reason;
+
+
+                document.getElementById(
+                    "recommendation"
+                ).style.display =
+                    "block";
+
+
+                // =========================================
+                // STATUS
+                // =========================================
+
+                if (status) {
+
+                    status.className =
+                        "success-status";
+
+                    status.innerText =
+                        "🧠 Alternate route calculated and compared";
+                }
+
+
+                console.log(
+                    "✅ Phase 3 route comparison displayed"
+                );
+
+                console.log(
+                    "🚑 Ambulance moving on alternate route"
+                );
+
+            }
+
+
+            // =========================================
+            // FAILURE
+            // =========================================
+
+            else {
+
+                if (status) {
+
+                    status.className =
+                        "error-status";
+
+                    status.innerText =
+                        "❌ " + data.message;
+                }
+
+
+                console.log(
+                    "❌ " + data.message
+                );
+            }
+        }
+    )
+
+    .catch(
+        error => {
+
+            console.error(
+                "❌ Error:",
+                error
+            );
+
+
+            if (status) {
+
+                status.className =
+                    "error-status";
+
+                status.innerText =
+                    "❌ Could not connect to Flask server.";
+            }
+        }
+    );
+}
+
+
+// =================================================
+// 🔄 RESET ROUTE
+// =================================================
+
+function resetRoute() {
+
+    clearMultipleVehicles();
+
+    var multiplePanel =
+        document.getElementById(
+            "multipleVehiclePanel"
+        );
+
+    if (multiplePanel) {
+        multiplePanel.style.display = "none";
+    }
+
+    console.log("🔄 Resetting route...");
+
+
+    // Stop ambulance animation
+    if (ambulanceAnimationId !== null) {
+
+        cancelAnimationFrame(
+            ambulanceAnimationId
+        );
+
+        ambulanceAnimationId = null;
+    }
+
+
+    // Remove ambulance
+    if (ambulanceMarker !== null) {
+
+        map.removeLayer(
+            ambulanceMarker
+        );
+
+        ambulanceMarker = null;
+    }
+
+
+    // Remove blocked road
+    if (blockedLine !== null) {
+
+        map.removeLayer(
+            blockedLine
+        );
+
+        blockedLine = null;
+    }
+
+
+    // Restore original route
+    routeData =
+        JSON.parse(
+            JSON.stringify(
+                originalRouteData
+            )
+        );
+
+
+    // Restore original distance
+    distanceData =
+        originalDistanceData;
+
+
+    // Restore original time
+    timeData =
+        originalTimeData;
+
+
+    // Draw original route
+    drawRoute(
+        originalRouteData,
+        "blue"
+    );
+
+
+    // Restart ambulance
+    startAmbulance(
+        originalRouteData
+    );
+
+
+    // Update current distance
+    document.getElementById(
+        "distance"
+    ).innerText =
+        originalDistanceData +
+        " km";
+
+
+    // Update current time
+    document.getElementById(
+        "time"
+    ).innerText =
+        originalTimeData +
+        " minutes";
+
+
+    // Restore original route card
+    document.getElementById(
+        "originalDistance"
+    ).innerText =
+        originalDistanceData +
+        " km";
+
+    document.getElementById(
+        "originalTime"
+    ).innerText =
+        originalTimeData +
+        " minutes";
+
+
+    // Clear alternate route
+    document.getElementById(
+        "alternateDistance"
+    ).innerText =
+        "Not calculated";
+
+    document.getElementById(
+        "alternateTime"
+    ).innerText =
+        "Not calculated";
+
+
+    // Hide recommendation
+    document.getElementById(
+        "recommendation"
+    ).style.display =
+        "none";
+
+
+    // Clear blocked road message
+    document.getElementById(
+        "blockedRoad"
+    ).innerText =
+        "";
+
+
+    // Reset status
+    var status =
+        document.getElementById(
+            "status"
+        );
+
+    if (status) {
+
+        status.style.display =
+            "block";
+
+        status.className =
+            "normal-status";
+
+        status.innerText =
+            "🚑 Ready for emergency route";
+    }
+
+
+    console.log(
+        "✅ Route reset successfully"
+    );
+}
+// =================================================
+// 🚨 PHASE 5 - MULTIPLE EMERGENCY VEHICLES
+// =================================================
+
+var multipleVehicleMarkers = [];
+
+var multipleVehicleAnimations = [];
+
+
+// =================================================
+// 🚨 START MULTIPLE VEHICLES
+// =================================================
+
+function startMultipleVehicles() {
+
+    console.log("🚨 Starting multiple emergency vehicles...");
+
+    var status = document.getElementById("status");
+
+    // =========================================
+    // GET SOURCE AND DESTINATION
+    // =========================================
+
+    var source =
+        document.getElementById("source").value.trim();
+
+    var destination =
+        document.getElementById("destination").value.trim();
+
+
+    // =========================================
+    // VALIDATE INPUT
+    // =========================================
+
+    if (source === "" || destination === "") {
+
+        alert(
+            "Please enter both source and destination"
+        );
+
+        return;
+    }
+
+
+    console.log("📍 Source:", source);
+    console.log("🏁 Destination:", destination);
+
+
+    if (status) {
+
+        status.style.display = "block";
+
+        status.className =
+            "normal-status";
+
+        status.innerText =
+            "🚨 Calculating routes for multiple emergency vehicles...";
+    }
+
+
+    // =========================================
+    // SEND SOURCE + DESTINATION TO FLASK
+    // =========================================
+
+    fetch(
+        "/multiple-routes",
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify({
+                source: source,
+                destination: destination
+            })
+        }
+    )
+
+    .then(response => {
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Server error"
+            );
+        }
+
+        return response.json();
+    })
+
+    .then(data => {
+
+        console.log(
+            "🚨 Multiple vehicle data:",
+            data
+        );
+
+        if (!data.success) {
+
+            throw new Error(
+                data.message
+            );
+        }
+
+        // =========================================
+        // CLEAR OLD VEHICLES
+        // =========================================
+
+        clearMultipleVehicles();
+
+
+        // =========================================
+        // SHOW PANEL
+        // =========================================
+
+        document.getElementById(
+            "multipleVehiclePanel"
+        ).style.display = "block";
+
+
+        var cards =
+            document.getElementById(
+                "multipleVehicleCards"
+            );
+
+        cards.innerHTML = "";
+
+
+        // =========================================
+        // CREATE VEHICLES
+        // =========================================
+
+        data.vehicles.forEach(vehicle => {
+
+            createVehicleCard(vehicle);
+
+            animateMultipleVehicle(vehicle);
+
+        });
+
+
+        if (status) {
+
+            status.className =
+                "success-status";
+
+            status.innerText =
+                "🚨 Multiple emergency vehicles deployed";
+        }
+
+
+        console.log(
+            "✅ Multiple emergency vehicles started"
+        );
+
+    })
+
+    .catch(error => {
+
+        console.error(
+            "❌ Multiple vehicle error:",
+            error
+        );
+
+
+        if (status) {
+
+            status.className =
+                "error-status";
+
+            status.innerText =
+                "❌ " + error.message;
+        }
+
+    });
+}
+
+
+// =================================================
+// CREATE VEHICLE CARD
+// =================================================
+
+function createVehicleCard(vehicle) {
+
+    var cards =
+        document.getElementById(
+            "multipleVehicleCards"
+        );
+
+
+    var card =
+        document.createElement(
+            "div"
+        );
+
+
+    card.id =
+        "vehicle-card-" +
+        vehicle.id;
+
+
+    card.style.cssText =
+        `
+        width:280px;
+        background:#f8fafc;
+        border-radius:10px;
+        padding:18px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.12);
+        border-top:5px solid #dc2626;
+        `;
+
+
+    card.innerHTML =
+        `
+        <h3>
+            ${vehicle.icon}
+            ${vehicle.name}
+        </h3>
+
+        <p>
+            📏 Distance:
+            <b>${vehicle.distance} km</b>
+        </p>
+
+        <p>
+            ⏱ Time:
+            <b>${vehicle.time} minutes</b>
+        </p>
+
+        <p>
+            🚦 Status:
+            <b id="${vehicle.id}-status">
+                Ready
+            </b>
+        </p>
+
+        <p>
+            📊 Progress:
+            <b id="${vehicle.id}-progress">
+                0%
+            </b>
+        </p>
+
+        <div
+            style="
+                width:100%;
+                height:8px;
+                background:#e5e7eb;
+                border-radius:10px;
+                overflow:hidden;
+            "
+        >
+
+            <div
+                id="${vehicle.id}-bar"
+                style="
+                    width:0%;
+                    height:100%;
+                    background:#16a34a;
+                    transition:width 0.1s;
+                "
+            >
+            </div>
+
+        </div>
+        `;
+
+
+    cards.appendChild(
+        card
+    );
+}
+
+
+// =================================================
+// ANIMATE ONE VEHICLE
+// =================================================
+
+function animateMultipleVehicle(
+    vehicle
+) {
+
+    if (
+        !vehicle.route ||
+        vehicle.route.length < 2
+    ) {
+
+        return;
+    }
+
+
+    // =============================================
+    // CREATE ICON
+    // =============================================
+
+    var icon =
+        L.divIcon(
+            {
+                html:
+                    vehicle.icon,
+
+                className:
+                    "ambulance-icon",
+
+                iconSize:
+                    [40, 40],
+
+                iconAnchor:
+                    [20, 20]
+            }
+        );
+
+
+    // =============================================
+    // CREATE MARKER
+    // =============================================
+
+    var marker =
+        L.marker(
+            vehicle.route[0],
+            {
+                icon: icon,
+                zIndexOffset: 900
+            }
+        ).addTo(map);
+
+
+    marker.bindPopup(
+        "<b>" +
+        vehicle.icon +
+        " " +
+        vehicle.name +
+        "</b><br>" +
+        "Emergency vehicle"
+    );
+
+
+    multipleVehicleMarkers.push(
+        marker
+    );
+
+
+    // =============================================
+    // ANIMATION
+    // =============================================
+
+    var index = 0;
+
+    var duration = 700;
+
+    function moveNext() {
+
+        if (
+            index >=
+            vehicle.route.length - 1
+        ) {
+
+            marker.setLatLng(
+                vehicle.route[
+                    vehicle.route.length - 1
+                ]
+            );
+
+
+            updateVehicleStatus(
+                vehicle,
+                100,
+                "Arrived"
+            );
+
+
+            return;
+        }
+
+
+        var start =
+            vehicle.route[index];
+
+        var end =
+            vehicle.route[index + 1];
+
+
+        var startTime =
+            performance.now();
+
+
+        function animate(
+            currentTime
+        ) {
+
+            var progress =
+                (
+                    currentTime -
+                    startTime
+                ) / duration;
+
+
+            if (progress > 1) {
+
+                progress = 1;
+            }
+
+
+            var lat =
+                start[0] +
+                (
+                    end[0] -
+                    start[0]
+                ) *
+                progress;
+
+
+            var lng =
+                start[1] +
+                (
+                    end[1] -
+                    start[1]
+                ) *
+                progress;
+
+
+            marker.setLatLng(
+                [lat, lng]
+            );
+
+
+            var totalSegments =
+                vehicle.route.length - 1;
+
+
+            var completedSegments =
+                index +
+                progress;
+
+
+            var percentage =
+                Math.round(
+                    (
+                        completedSegments /
+                        totalSegments
+                    ) * 100
+                );
+
+
+            updateVehicleStatus(
+                vehicle,
+                percentage,
+                "En Route"
+            );
+
+
+            if (progress < 1) {
+
+                var animationId =
+                    requestAnimationFrame(
+                        animate
+                    );
+
+
+                multipleVehicleAnimations.push(
+                    animationId
+                );
+
+            }
+
+            else {
+
+                index++;
+
+                moveNext();
+            }
+        }
+
+
+        requestAnimationFrame(
+            animate
+        );
+    }
+
+
+    updateVehicleStatus(
+        vehicle,
+        0,
+        "En Route"
+    );
+
+
+    moveNext();
+}
+
+
+// =================================================
+// UPDATE VEHICLE STATUS
+// =================================================
+
+function updateVehicleStatus(
+    vehicle,
+    percentage,
+    statusText
+) {
+
+    var status =
+        document.getElementById(
+            vehicle.id +
+            "-status"
+        );
+
+
+    var progress =
+        document.getElementById(
+            vehicle.id +
+            "-progress"
+        );
+
+
+    var bar =
+        document.getElementById(
+            vehicle.id +
+            "-bar"
+        );
+
+
+    if (status) {
+
+        status.innerText =
+            statusText;
+    }
+
+
+    if (progress) {
+
+        progress.innerText =
+            percentage +
+            "%";
+    }
+
+
+    if (bar) {
+
+        bar.style.width =
+            percentage +
+            "%";
+    }
+}
+
+
+// =================================================
+// CLEAR MULTIPLE VEHICLES
+// =================================================
+
+function clearMultipleVehicles() {
+
+    multipleVehicleAnimations.forEach(
+        animationId => {
+
+            cancelAnimationFrame(
+                animationId
+            );
+        }
+    );
+
+
+    multipleVehicleAnimations = [];
+
+
+    multipleVehicleMarkers.forEach(
+        marker => {
+
+            if (marker) {
+
+                map.removeLayer(
+                    marker
+                );
+            }
+        }
+    );
+
+
+    multipleVehicleMarkers = [];
+}
+// =================================================
+// 🧠 PHASE 6 - AI ROUTE OPTIMIZATION
+// =================================================
+
+function aiOptimizeRoute() {
+
+    console.log(
+        "🧠 Starting AI route optimization..."
+    );
+
+    var status =
+        document.getElementById("status");
+
+    if (status) {
+
+        status.style.display = "block";
+
+        status.className =
+            "normal-status";
+
+        status.innerText =
+            "🧠 AI is analyzing possible emergency routes...";
+    }
+
+
+    fetch(
+        "/ai-optimize",
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            }
+        }
+    )
+
+    .then(
+        response => {
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "AI server error"
+                );
+            }
+
+            return response.json();
+        }
+    )
+
+    .then(
+        data => {
+
+            console.log(
+                "🧠 AI response:",
+                data
+            );
+
+
+            if (!data.success) {
+
+                throw new Error(
+                    data.message
+                );
+            }
+
+
+            // =========================================
+            // STORE AI ROUTE
+            // =========================================
+
+            routeData =
+                data.route;
+
+            distanceData =
+                data.distance;
+
+            timeData =
+                data.time;
+
+
+            // =========================================
+            // DRAW AI SELECTED ROUTE
+            // =========================================
+
+            drawRoute(
+                data.route,
+                "green"
+            );
+
+
+            // =========================================
+            // MOVE AMBULANCE
+            // =========================================
+
+            startAmbulance(
+                data.route
+            );
+
+
+            // =========================================
+            // UPDATE DISTANCE
+            // =========================================
+
+            document.getElementById(
+                "distance"
+            ).innerText =
+                data.distance + " km";
+
+
+            // =========================================
+            // UPDATE TIME
+            // =========================================
+
+            document.getElementById(
+                "time"
+            ).innerText =
+                data.time + " minutes";
+
+
+            // =========================================
+            // UPDATE RECOMMENDATION
+            // =========================================
+
+            var recommendation =
+                document.getElementById(
+                    "recommendedRoute"
+                );
+
+            var reason =
+                document.getElementById(
+                    "recommendationReason"
+                );
+
+
+            if (recommendation) {
+
+                recommendation.innerText =
+                    "🧠 AI Recommended Route";
+            }
+
+
+            if (reason) {
+
+                reason.innerText =
+                    "AI selected the best route using distance, travel time and road quality.";
+            }
+
+
+            // =========================================
+            // SUCCESS STATUS
+            // =========================================
+
+            if (status) {
+
+                status.className =
+                    "success-status";
+
+                status.innerText =
+                    "🧠 AI selected the best emergency route";
+            }
+
+
+            console.log(
+                "✅ AI route selected successfully"
+            );
+
+            console.log(
+                "🏆 AI Score:",
+                data.ai_score
+            );
+
+        }
+    )
+
+    .catch(
+        error => {
+
+            console.error(
+                "❌ AI optimization error:",
+                error
+            );
+
+
+            if (status) {
+
+                status.className =
+                    "error-status";
+
+                status.innerText =
+                    "❌ " + error.message;
+            }
+        }
+    );
+}
+// =================================================
+// 📊 PHASE 7 - LOAD DASHBOARD DATA
+// =================================================
+
+function loadDashboardData() {
+
+    console.log(
+        "📊 Loading emergency dashboard data..."
+    );
+
+
+    fetch("/dashboard-data", {
+        method: "GET"
+    })
+
+
+    .then(response => {
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Dashboard server error"
+            );
+        }
+
+        return response.json();
+
+    })
+
+
+    .then(data => {
+
+        console.log(
+            "📊 Dashboard data:",
+            data
+        );
+
+
+        if (!data.success) {
+
+            throw new Error(
+                data.message ||
+                "Unable to load dashboard data"
+            );
+
+        }
+
+
+        // =========================================
+        // UPDATE DASHBOARD CARDS
+        // =========================================
+
+        document.getElementById(
+            "dashboardTotalRoutes"
+        ).innerText =
+            data.total_routes;
+
+
+        document.getElementById(
+            "dashboardShortestRoutes"
+        ).innerText =
+            data.shortest_routes;
+
+
+        document.getElementById(
+            "dashboardAlternateRoutes"
+        ).innerText =
+            data.alternate_routes;
+
+
+        document.getElementById(
+            "dashboardCompletedRoutes"
+        ).innerText =
+            data.completed_routes;
+
+
+        // =========================================
+        // UPDATE RECENT ROUTES TABLE
+        // =========================================
+
+        var table =
+            document.getElementById(
+                "dashboardRoutesTable"
+            );
+
+
+        table.innerHTML = "";
+
+
+        if (
+            !data.recent_routes ||
+            data.recent_routes.length === 0
+        ) {
+
+            table.innerHTML = `
+                <tr>
+                    <td colspan="9">
+                        No emergency routes found
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+
+        data.recent_routes.forEach(
+            function(route) {
+
+                var routeClass =
+                    route.route_type ===
+                    "Alternate Route"
+                        ? "route-alternate"
+                        : "route-shortest";
+
+
+                var statusClass =
+                    route.status ===
+                    "Completed"
+                        ? "route-completed"
+                        : "";
+
+
+                var row =
+                    document.createElement(
+                        "tr"
+                    );
+
+
+                row.innerHTML = `
+
+                    <td>
+                        ${route.id}
+                    </td>
+
+                    <td>
+                        ${route.source}
+                    </td>
+
+                    <td>
+                        ${route.destination}
+                    </td>
+
+                    <td>
+                        ${route.vehicle_type}
+                    </td>
+
+                    <td>
+                        ${route.distance} km
+                    </td>
+
+                    <td>
+                        ${route.travel_time} min
+                    </td>
+
+                    <td class="${routeClass}">
+                        ${route.route_type}
+                    </td>
+
+                    <td class="${statusClass}">
+                        ${route.status}
+                    </td>
+
+                    <td>
+                        ${route.created_at}
+                    </td>
+
+                `;
+
+
+                table.appendChild(
+                    row
+                );
+
+            }
+        );
+
+
+        console.log(
+            "✅ Dashboard loaded successfully"
+        );
+
+    })
+
+
+    .catch(error => {
+
+        console.error(
+            "❌ Dashboard error:",
+            error
+        );
+
+
+        var table =
+            document.getElementById(
+                "dashboardRoutesTable"
+            );
+
+
+        if (table) {
+
+            table.innerHTML = `
+
+                <tr>
+
+                    <td colspan="9"
+                        style="color:#dc2626;">
+
+                        ❌ Unable to load dashboard data
+
+                    </td>
+
+                </tr>
+
+            `;
+
+        }
+
+    });
+
+}
+
+
+// =================================================
+// 🚀 LOAD DASHBOARD WHEN PAGE OPENS
+// =================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        loadDashboardData();
+
+    }
+);
+    </script>
+
+
+</body>
+
+</html>
